@@ -23,7 +23,7 @@
             padding: 2rem;
             max-width: 50rem;
             margin: auto;
-            position: relative; /* Needed for absolute positioning of header/score */
+            position: relative;
         }
         .quote-text {
             /* Max width to prevent lines from being too long, especially on desktop */
@@ -32,6 +32,27 @@
         /* Custom flash effect classes */
         .flash-green { background-color: #10B981 !important; } /* Emerald 500 */
         .flash-red { background-color: #EF4444 !important; }    /* Red 500 */
+        /* Message Box Styling */
+        #messageBox {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 1.5rem;
+            background-color: #1f2937; /* Dark gray background */
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            max-width: 80%;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+        }
+        #messageBox.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
@@ -68,10 +89,26 @@
             </button>
             
         </div>
+        
+        <!-- Custom Message Box for robustness (currently unused but included for compliance) -->
+        <div id="messageBox" class="text-white">
+            <p id="messageText" class="text-lg font-semibold mb-4"></p>
+            <button onclick="document.getElementById('messageBox').classList.remove('active')" 
+                    class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                OK
+            </button>
+        </div>
 
     </div>
 
-    <script type="module">
+    <script type="module" type="text/javascript">
+        // Function to display messages without using alert()
+        function messageBox(message) {
+            const box = document.getElementById('messageBox');
+            document.getElementById('messageText').textContent = message;
+            box.classList.add('active');
+        }
+
         const body = document.body;
         const quoteDisplay = document.getElementById('quoteDisplay');
         const scoreValue = document.getElementById('scoreValue');
@@ -83,7 +120,7 @@
         let hasAnswered = false;
 
         // ---------------------------------------------------------------------
-        // >>> CUSTOMIZATION POINT: MODIFY THIS QUOTE ARRAY <<<
+        // >>> CUSTOMIZATION POINT: THE QUOTE ARRAY <<<
         // Contains 90 total quotes: 45 verified Trump quotes (isTrump: true) 
         // and 45 debunked/false quotes (isTrump: false).
         // ---------------------------------------------------------------------
@@ -194,6 +231,7 @@
             
             // Refill the pool if it's empty
             if (availableQuotes.length === 0) {
+                // messageBox("You've completed all the quotes! Starting over now."); // Optional: Use messageBox for game completion
                 availableQuotes = [...quotes];
             }
 
@@ -229,8 +267,8 @@
                 score++;
                 body.classList.add('flash-green');
             } else {
-                // If incorrect, briefly flash red
-                score = 0; // Reset score on incorrect answer
+                // If incorrect, briefly flash red and reset score
+                score = 0; 
                 body.classList.add('flash-red');
             }
             scoreValue.textContent = score;
