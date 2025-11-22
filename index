@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Did Trump Say This?</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000; /* Black background */
+            transition: background-color 0.1s ease-in-out;
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            max-width: 50rem;
+            margin: auto;
+            position: relative; /* Needed for absolute positioning of header/score */
+        }
+        .quote-text {
+            /* Max width to prevent lines from being too long, especially on desktop */
+            max-width: 90%; 
+        }
+        /* Custom flash effect classes */
+        .flash-green { background-color: #10B981 !important; } /* Emerald 500 */
+        .flash-red { background-color: #EF4444 !important; }    /* Red 500 */
+    </style>
+</head>
+<body>
+    
+    <div id="app" class="app-container">
+        
+        <!-- Branding Header -->
+        <div class="absolute top-4 left-4 text-white text-left z-10">
+            <h1 class="text-xl md:text-2xl font-extrabold mb-0 leading-tight">Did Donald Trump Say This?</h1>
+            <p class="text-gray-500 text-sm font-light mt-0 leading-none">DidTrumpSayThis.xyz</p>
+        </div>
+        
+        <!-- Score Display -->
+        <div class="absolute top-4 right-4 text-white text-xl font-bold z-10">
+            Score: <span id="scoreValue">0</span>
+        </div>
+
+        <!-- The Quote -->
+        <p id="quoteDisplay" class="quote-text text-white text-2xl md:text-4xl lg:text-5xl font-extrabold text-center mb-12 select-none">
+            Loading quote...
+        </p>
+
+        <!-- The Buttons -->
+        <div class="flex space-x-6 w-full max-w-lg">
+            
+            <button id="noButton" onclick="handleAnswer(false)" 
+                    class="flex-1 px-8 py-5 bg-red-600 text-white text-xl font-bold rounded-lg shadow-xl hover:bg-red-700 transition duration-150 transform hover:scale-[1.03] focus:outline-none focus:ring-4 focus:ring-red-500/50">
+                NO
+            </button>
+            
+            <button id="yesButton" onclick="handleAnswer(true)" 
+                    class="flex-1 px-8 py-5 bg-green-600 text-white text-xl font-bold rounded-lg shadow-xl hover:bg-green-700 transition duration-150 transform hover:scale-[1.03] focus:outline-none focus:ring-4 focus:ring-green-500/50">
+                YES
+            </button>
+            
+        </div>
+
+    </div>
+
+    <script type="module">
+        const body = document.body;
+        const quoteDisplay = document.getElementById('quoteDisplay');
+        const scoreValue = document.getElementById('scoreValue');
+        const noButton = document.getElementById('noButton');
+        const yesButton = document.getElementById('yesButton');
+
+        let currentQuote = null;
+        let score = 0;
+        let hasAnswered = false;
+
+        // ---------------------------------------------------------------------
+        // >>> CUSTOMIZATION POINT: MODIFY THIS QUOTE ARRAY <<<
+        // Contains 90 total quotes: 45 verified Trump quotes (isTrump: true) 
+        // and 45 debunked/false quotes (isTrump: false).
+        // ---------------------------------------------------------------------
+        const quotes = [
+            // --- 45 VERIFIED TRUMP QUOTES (isTrump: true) ---
+            { text: "The late, great Hannibal Lecter... he often times would have a friend for dinner.", isTrump: true },
+            { text: "I’d say, ‘Shark! I’m staying with the boat.’ I’ll take electrocution every single time.", isTrump: true },
+            { text: "They’re eating the dogs, the people that came in, they’re eating the cats.", isTrump: true },
+            { text: "I HATE TAYLOR SWIFT!", isTrump: true },
+            { text: "If I don’t get elected, it’s going to be a bloodbath for the country.", isTrump: true },
+            { text: "We will not allow a windmill to be built in the United States.", isTrump: true },
+            { text: "They [windmills] drive whales ‘loco’.", isTrump: true },
+            { text: "I have nothing to do with Project 2025.", isTrump: true },
+            { text: "I want to be a dictator for one day.", isTrump: true },
+            { text: "You see that fentanyl all over the ocean? It’s like floating in bags.", isTrump: true },
+            { text: "I won the youth vote by 34 points.", isTrump: true },
+            { text: "Give me a glass of water, let me drop it on the magnets. That’s the end of the magnets.", isTrump: true },
+            { text: "I hereby declare them void, vacant.", isTrump: true },
+            { text: "She [Kamala Harris] was born mentally impaired.", isTrump: true },
+            { text: "We have a new category of crime: Migrant crime.", isTrump: true },
+            { text: "The wind ruins everything. It kills all your birds. The eagles, you see them? They’re all dead.", isTrump: true },
+            { text: "I’m the best friend the Black community has ever had since Abraham Lincoln.", isTrump: true },
+            { text: "We have a country that is a cesspool. We are a failing nation.", isTrump: true },
+            { text: "Release the water that comes from north.", isTrump: true },
+            { text: "I ended seven wars.", isTrump: true },
+            { text: "They will be executing the baby... after birth.", isTrump: true },
+            { text: "Washington D.C. has a murder a week.", isTrump: true },
+            { text: "If Jesus Christ came down and was the vote counter, I would win California.", isTrump: true },
+            { text: "They are taking Black jobs... and Hispanic jobs.", isTrump: true },
+            { text: "I did not have sex with a porn star.", isTrump: true },
+            { text: "Zohran Mamdani is a communist.", isTrump: true },
+            { text: "I’m better looking than her [Kamala Harris].", isTrump: true },
+            { text: "We are the only country in the world that uses mail-in voting.", isTrump: true },
+            { text: "Democrats paid Beyoncé $11 million.", isTrump: true },
+            { text: "Declining cargo traffic is a good thing.", isTrump: true },
+            { text: "China made $1 trillion off trade with us.", isTrump: true },
+            { text: "We are taking in $2 billion a day in tariffs.", isTrump: true },
+            { text: "It is poisoning the blood of our country.", isTrump: true },
+            { text: "I never said ‘lock her up’.", isTrump: true },
+            { text: "The FBI was authorized to shoot me.", isTrump: true },
+            { text: "I protected the Constitution like nobody else.", isTrump: true },
+            { text: "My uncle knew the Unabomber.", isTrump: true },
+            { text: "This judge is a certified Trump hater.", isTrump: true },
+            { text: "I could have settled the Ukraine war in 24 hours.", isTrump: true },
+            { text: "We have no inflation.", isTrump: true },
+            { text: "Kamala migrants are vicious monsters.", isTrump: true },
+            { text: "They’re emptying their prisons and insane asylums into our country.", isTrump: true },
+            { text: "I am a very stable genius.", isTrump: true },
+            { text: "Swaying to music for 40 minutes.", isTrump: true }, // Action, but attributed to him
+            { text: "My tariffs are slashing the deficit by 25%.", isTrump: true },
+
+            // --- 45 BELIEVABLE BUT FALSE/MISQUOTED (isTrump: false) ---
+            { text: "Republicans are the dumbest group of voters.", isTrump: false, source: "Debunked quote from People Magazine in the 90s." },
+            { text: "I signed a bill to release the Jeffrey Epstein client list.", isTrump: false, source: "Viral rumor; he never signed such a bill." },
+            { text: "The U.S. should have been sending weapons to Russia.", isTrump: false, source: "Fake AI audio of Donald Trump Jr., wrongly attributed to the President." },
+            { text: "I donate my entire salary to the families of fallen soldiers.", isTrump: false, source: "He donated his salary to government agencies, not directly to families." },
+            { text: "I will ban the IRS.", isTrump: false, source: "He spoke of an 'External Revenue Service,' not a specific ban on the IRS." },
+            { text: "We are going to sell the Statue of Liberty.", isTrump: false, source: "Viral rumor sparked by a French lawmaker’s comment, not Trump." },
+            { text: "I have better hair than anyone in the history of the presidency.", isTrump: false, source: "Plausible, but never said." },
+            { text: "I will make Barron my Vice President.", isTrump: false, source: "Satire that many believed." },
+            { text: "Elon Musk is going to buy CNN for me.", isTrump: false, source: "A satirical news story that went viral as fact." },
+            { text: "I’m going to paint the White House gold.", isTrump: false, source: "Classic satire." },
+            { text: "The Constitution is broken and I will fix it.", isTrump: false, source: "He said 'terminate rules found in the Constitution,' but never the phrase 'The Constitution is broken'." },
+            { text: "I will ban all electric cars on day one.", isTrump: false, source: "He threatens tariffs and mocks them, but has never said 'I will ban them all'." },
+            { text: "I will replace the U.S. dollar with Bitcoin.", isTrump: false, source: "He supports crypto now, but never said he would replace the dollar." },
+            { text: "I never lost the popular vote.", isTrump: false, source: "He claims the election was rigged, but rarely contests the specific popular vote count in those exact words." },
+            { text: "I will deport Melania if she doesn't listen.", isTrump: false, source: "Satire." },
+            { text: "I will change the national anthem to ‘God Bless the USA’.", isTrump: false, source: "Viral rumor." },
+            { text: "I will fire the Supreme Court.", isTrump: false, source: "He cannot do this and hasn't said it." },
+            { text: "I will nuke a hurricane.", isTrump: false, source: "Trump publicly denied ever saying it." },
+            { text: "I will make swearing illegal.", isTrump: false, source: "Satire." },
+            { text: "I will arrest Joe Biden personally.", isTrump: false, source: "He threatened a special prosecutor, not a personal arrest." },
+            { text: "I will make ‘The Apprentice’ required viewing in schools.", isTrump: false, source: "Satire." },
+            { text: "I will force everyone to stand for the anthem.", isTrump: false, source: "He said they should stand or be fired by NFL owners, not force it by law." },
+            { text: "I will ban sharks from American waters.", isTrump: false, source: "He hates sharks, but never proposed a ban." },
+            { text: "I will sell Alaska back to Russia.", isTrump: false, source: "Satire." },
+            { text: "I will make golf the national sport.", isTrump: false, source: "Satire." },
+            { text: "I will put my face on Mount Rushmore.", isTrump: false, source: "He joked it was a 'good idea' but denied saying 'I will do it'." },
+            { text: "I will tax breathing.", isTrump: false, source: "Satire." },
+            { text: "I will make Elon Musk King of Mars.", isTrump: false, source: "Satire." },
+            { text: "I will outlaw voting for Democrats.", isTrump: false, source: "Satire." },
+            { text: "I will turn the moon into a casino.", isTrump: false, source: "Satire." },
+            { text: "Project 2025 is my official Bible.", isTrump: false, source: "He has consistently disavowed it." },
+            { text: "I will ban TikTok.", isTrump: false, source: "In 2024/2025, he actually said he opposes a ban, contradicting his 2020 stance." },
+            { text: "I will invade Canada.", isTrump: false, source: "Satire." },
+            { text: "I will drain the Pacific Ocean.", isTrump: false, source: "He said 'drain the swamp,' not the ocean." },
+            { text: "I will make myself president for life.", isTrump: false, source: "He joked about a third term, but never used the phrase 'president for life'." },
+            { text: "I will ban cats.", isTrump: false, source: "Satire related to the 'eating cats' comment." },
+            { text: "I will force everyone to wear red hats.", isTrump: false, source: "Satire." },
+            { text: "I passed a new law changing child support taxes.", isTrump: false, source: "Viral TikTok rumor; he did not do this." },
+            { text: "Evidence suggests 1 in 25 women who take abortion pills are hospitalized.", isTrump: false, source: "A claim made by his allies/admin officials, but not a direct quote from him." },
+            { text: "I will rename Washington D.C. to Trump City.", isTrump: false, source: "Satire." },
+            { text: "I will build a wall around New York City.", isTrump: false, source: "Satire." },
+            { text: "DOGE has halted payments to Barack Obama.", isTrump: false, source: "Viral fake news story." },
+            { text: "I will provide medical insurance for illegal immigrants.", isTrump: false, source: "He claims Democrats do this; he never said he would." },
+            { text: "I’m the second coming of Christ.", isTrump: false, source: "He reposted someone calling him the 'King of Israel,' but didn't say this himself." },
+            { text: "I will pardon myself on live TV.", isTrump: false, source: "He has discussed the power to pardon himself, but never said he would do it 'on live TV'." }
+        ];
+        // ---------------------------------------------------------------------
+
+        let availableQuotes = [...quotes]; // Start with a full list
+
+        /**
+         * Selects and displays a new random quote from the available pool.
+         */
+        function loadNextQuote() {
+            hasAnswered = false;
+            
+            // Refill the pool if it's empty
+            if (availableQuotes.length === 0) {
+                availableQuotes = [...quotes];
+            }
+
+            // Randomly select a quote and remove it from the pool
+            const randomIndex = Math.floor(Math.random() * availableQuotes.length);
+            currentQuote = availableQuotes[randomIndex];
+            availableQuotes.splice(randomIndex, 1);
+
+            quoteDisplay.textContent = currentQuote.text;
+            
+            // Re-enable buttons and reset styles
+            noButton.disabled = false;
+            yesButton.disabled = false;
+            body.style.backgroundColor = '#000000'; // Reset background to black
+        }
+
+        /**
+         * Handles the user's answer guess.
+         * @param {boolean} guess - true for 'Yes', false for 'No'.
+         */
+        window.handleAnswer = (guess) => {
+            if (hasAnswered) return;
+            hasAnswered = true;
+
+            const isCorrect = (guess === currentQuote.isTrump);
+            
+            // Disable buttons to prevent multiple clicks
+            noButton.disabled = true;
+            yesButton.disabled = true;
+
+            // 1. Flash the screen and update score
+            if (isCorrect) {
+                score++;
+                body.classList.add('flash-green');
+            } else {
+                // If incorrect, briefly flash red
+                score = 0; // Reset score on incorrect answer
+                body.classList.add('flash-red');
+            }
+            scoreValue.textContent = score;
+            
+            // 2. Reset flash and load next quote after a short delay (1000ms total)
+            setTimeout(() => {
+                body.classList.remove('flash-green', 'flash-red');
+                body.style.backgroundColor = '#000000'; // Ensure it resets to black
+                
+                // Load next quote immediately
+                loadNextQuote(); 
+            }, 1000); 
+        }
+        
+        // Initial game start
+        loadNextQuote();
+    </script>
+</body>
+</html>
